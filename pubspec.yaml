@@ -5,8 +5,8 @@ homepage: https://github.com/kineapps/flutter_file_dialog
 repository: https://github.com/kineapps/flutter_file_dialog
 
 environment:
-  sdk: ^3.12.0
-  flutter: ">=3.44.0"
+  sdk: ^3.8.0
+  flutter: ">=3.32.0"
 
 dependencies:
   flutter:
