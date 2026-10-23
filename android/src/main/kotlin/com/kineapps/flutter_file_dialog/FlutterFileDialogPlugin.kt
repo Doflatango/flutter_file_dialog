@@ -24,6 +24,11 @@ class FlutterFileDialogPlugin : FlutterPlugin, ActivityAware, MethodCallHandler 
     private var activityBinding: ActivityPluginBinding? = null
     private var methodChannel: MethodChannel? = null
 
+    // Avoid repeating DocumentsProvider lookups when several files are saved
+    // into the same subdirectory (queries can be slow, especially for cloud
+    // providers).
+    private val directoryCache = DirectoryCache()
+
     companion object {
         const val LOG_TAG = "FlutterFileDialogPlugin"
     }
@@ -75,6 +80,7 @@ class FlutterFileDialogPlugin : FlutterPlugin, ActivityAware, MethodCallHandler 
         if (fileDialog != null) {
             fileDialog!!.setActivity(null)
         }
+        directoryCache.clear()
     }
 
     private fun doOnAttachedToEngine(messenger: BinaryMessenger) {
@@ -95,6 +101,7 @@ class FlutterFileDialogPlugin : FlutterPlugin, ActivityAware, MethodCallHandler 
         }
         pluginBinding = null
 
+        directoryCache.clear()
         methodChannel?.setMethodCallHandler(null)
         methodChannel = null
 
@@ -128,6 +135,7 @@ class FlutterFileDialogPlugin : FlutterPlugin, ActivityAware, MethodCallHandler 
             fileDialog = null
         }
         activityBinding = null
+        directoryCache.clear()
 
         Log.d(LOG_TAG, "doOnDetachedFromActivity - OUT")
     }
@@ -197,15 +205,98 @@ class FlutterFileDialogPlugin : FlutterPlugin, ActivityAware, MethodCallHandler 
             return
         }
 
-        activityBinding?.activity?.let { activity ->
-            val dirURI: Uri = Uri.parse(directory)
-            val outputFolder: DocumentFile? = DocumentFile.fromTreeUri(activity, dirURI)
-            val newFile = outputFolder?.createFile(mimeType, fileName)
-            newFile?.uri?.let { writeFile(activity, data, it) }
-            result.success(newFile?.uri?.path)
+        val activity = activityBinding?.activity
+        if (activity == null) {
+            result.error("internal_error", "No activity is available", null)
+            return
+        }
+
+        val pathSegments = parseRelativePath(fileName)
+        if (pathSegments == null) {
+            result.error("invalid_arguments", "Invalid 'fileName'", null)
+            return
+        }
+
+        val relativePath = pathSegments.dropLast(1)
+        val cacheKey = DirectoryCacheKey(directory, relativePath)
+
+        try {
+            val cachedFolder = directoryCache.get(cacheKey)
+
+            // Try the cached folder first; resolve (or re-resolve, if the
+            // cached directory was deleted/renamed) and retry once on failure.
+            var newFile = cachedFolder?.createFile(mimeType, pathSegments.last())
+            if (newFile == null) {
+                if (cachedFolder != null) {
+                    directoryCache.remove(cacheKey)
+                }
+
+                val destinationFolder = resolveAndCacheDirectory(activity, cacheKey)
+                if (destinationFolder == null) {
+                    result.error("directory_create_failed", "Failed to create the target directory", null)
+                    return
+                }
+
+                newFile = destinationFolder.createFile(mimeType, pathSegments.last())
+            }
+
+            if (newFile == null) {
+                directoryCache.remove(cacheKey)
+                result.error("file_create_failed", "Failed to create the target file", null)
+                return
+            }
+
+            writeFile(activity, data, newFile.uri)
+            result.success(newFile.uri.path)
+        } catch (e: Exception) {
+            directoryCache.remove(cacheKey)
+            Log.e(LOG_TAG, "saveFileToDirectory failed", e)
+            result.error("file_create_failed", e.localizedMessage, e.toString())
         }
 
         Log.d(LOG_TAG, "saveFileToDirectory - OUT")
+    }
+
+    /**
+     * Splits a relative file path into its segments, rejecting absolute paths
+     * and parent-directory references so a save can never escape the picked
+     * directory.
+     */
+    internal fun parseRelativePath(path: String): List<String>? {
+        val segments = path.split('/')
+        if (segments.any { it.isEmpty() || it == "." || it == ".." }) {
+            return null
+        }
+        return segments
+    }
+
+    /** Creates (or reuses) the directory segments below [parent]. */
+    private fun ensureDirectory(parent: DocumentFile, segments: List<String>): DocumentFile? {
+        var directory = parent
+        for (segment in segments) {
+            val existing = directory.findFile(segment)
+            directory = when {
+                existing == null -> directory.createDirectory(segment) ?: return null
+                existing.isDirectory -> existing
+                else -> return null
+            }
+        }
+        return directory
+    }
+
+    private fun resolveAndCacheDirectory(
+            activity: Activity,
+            cacheKey: DirectoryCacheKey
+    ): DocumentFile? {
+        val context = activity.applicationContext ?: activity
+        val outputFolder: DocumentFile? = DocumentFile.fromTreeUri(context, Uri.parse(cacheKey.treeUri))
+        if (outputFolder == null) {
+            return null
+        }
+
+        val destinationFolder = ensureDirectory(outputFolder, cacheKey.path) ?: return null
+        directoryCache.put(cacheKey, destinationFolder)
+        return destinationFolder
     }
 
     private fun writeFile(

@@ -85,4 +85,28 @@ class FlutterFileDialogPluginTest {
         assertEquals(1, pending.successCount)
         assertNull(pending.lastSuccessValue)
     }
+
+    @Test
+    fun `parseRelativePath - should accept flat and nested paths`() {
+        val plugin = FlutterFileDialogPlugin()
+
+        assertEquals(listOf("file.txt"), plugin.parseRelativePath("file.txt"))
+        assertEquals(
+                listOf("reports", "2026", "file.txt"),
+                plugin.parseRelativePath("reports/2026/file.txt"))
+    }
+
+    @Test
+    fun `parseRelativePath - should reject paths escaping the picked directory`() {
+        val plugin = FlutterFileDialogPlugin()
+
+        assertNull(plugin.parseRelativePath(""))
+        assertNull(plugin.parseRelativePath("."))
+        assertNull(plugin.parseRelativePath(".."))
+        assertNull(plugin.parseRelativePath("/file.txt"))
+        assertNull(plugin.parseRelativePath("reports//file.txt"))
+        assertNull(plugin.parseRelativePath("reports/./file.txt"))
+        assertNull(plugin.parseRelativePath("reports/../file.txt"))
+        assertNull(plugin.parseRelativePath("reports/"))
+    }
 }

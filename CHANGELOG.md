@@ -1,3 +1,8 @@
+## Unreleased
+
+- `saveFileToDirectory`: `fileName` may now contain subdirectories(for example `reports/2026/report.pdf`); missing directories are created automatically below the picked directory on Android and iOS. Absolute paths and `.`/`..` segments are rejected.
+- [iOS] If the `fileName` path is an existing directory, `saveFileToDirectory` now fails instead of reporting `file_already_exists`.
+
 ## 3.3.3
 
 - [Android] Fix fatal "Reply already submitted" crash on devices without a documents provider (#60): startActivityForResult throwing ActivityNotFoundException left the dialog pending while Android still delivered RESULT_CANCELED, so the result was replied twice; the call now fails with an "activity_not_found" error

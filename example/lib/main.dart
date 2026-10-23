@@ -214,7 +214,7 @@ class _MyAppState extends State<MyApp> {
 
     final fileData = _currentFile!.readAsBytesSync();
     final mimeType = 'image/$ext';
-    final newFileName = 'abc123.$ext';
+    final newFileName = 'images/abc123.$ext';
 
     await FlutterFileDialog.saveFileToDirectory(
       directory: _pickedDirectory!,

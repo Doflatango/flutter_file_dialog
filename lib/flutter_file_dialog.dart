@@ -60,6 +60,10 @@ class FlutterFileDialog {
   /// [replace] iOS only
   /// [onFileExists] iOS only
   ///
+  /// [fileName] may contain `/`, e.g. `a/b/c.jpg`. Missing directories
+  /// are created automatically below [directory]. Absolute paths and
+  /// `.`/`..` path segments are rejected.
+  ///
   /// - on iOS
   /// In case to prevent files from being overwritten unexpectedly,
   /// by default:

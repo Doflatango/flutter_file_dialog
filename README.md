@@ -62,8 +62,10 @@ if (pickedDirectory != null) {
   final filePath = await FlutterFileDialog.saveFileToDirectory(
     directory: pickedDirectory!,
     data: file.readAsBytesSync(),
-    mimeType: "image/jpeg",
-    fileName: "fileName.jpeg",
+    mimeType: "text/plain",
+    fileName: "fileName.md",
+    // save to a subdirectory:
+    // fileName: "images/a/b.jpeg"
     replace: true,
   );
 }

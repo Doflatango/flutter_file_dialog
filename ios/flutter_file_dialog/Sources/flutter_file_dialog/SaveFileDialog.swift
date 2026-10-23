@@ -61,9 +61,32 @@ class SaveFileDialog: NSObject, UIDocumentPickerDelegate {
             return
         }
 
-        let fileUrl = directory!.appendingPathComponent(params.fileName!, isDirectory: false)
+        // fileName may contain '/' separated subdirectories, which are
+        // created below the picked directory. Reject absolute paths and
+        // parent-directory references so the file cannot escape that directory.
+        let pathComponents = params.fileName!.split(separator: "/", omittingEmptySubsequences: false)
+        if pathComponents.isEmpty || pathComponents.contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }) {
+            result(FlutterError(code: "invalid_arguments",
+                                message: "Invalid 'fileName'",
+                                details: nil)
+            )
+            return
+        }
 
-        if FileManager.default.fileExists(atPath: fileUrl.path) {
+        let fileUrl = pathComponents.reduce(directory!) { url, component in
+            url.appendingPathComponent(String(component), isDirectory: false)
+        }
+
+        var isDirectory: ObjCBool = false
+        if FileManager.default.fileExists(atPath: fileUrl.path, isDirectory: &isDirectory) {
+            if isDirectory.boolValue {
+                result(FlutterError(code: "file_create_failed",
+                                    message: "A directory exists at the target path: '\(fileUrl.path)'",
+                                    details: nil)
+                )
+                return
+            }
+
             if !params.replace {
                 result(FlutterError(code: "file_already_exists",
                                     message: "File already exists: '\(fileUrl.absoluteString)'",
@@ -76,6 +99,20 @@ class SaveFileDialog: NSObject, UIDocumentPickerDelegate {
                 try FileManager.default.removeItem(at: fileUrl)
             } catch let error {
                 result(FlutterError(code: "file_remove_failed",
+                                    message: error.localizedDescription,
+                                    details: nil)
+                )
+                return
+            }
+        }
+
+        // create missing intermediate directories (if any)
+        if pathComponents.count > 1 {
+            do {
+                try FileManager.default.createDirectory(at: fileUrl.deletingLastPathComponent(),
+                                                        withIntermediateDirectories: true)
+            } catch {
+                result(FlutterError(code: "directory_create_failed",
                                     message: error.localizedDescription,
                                     details: nil)
                 )
