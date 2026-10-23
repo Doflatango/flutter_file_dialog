@@ -59,25 +59,9 @@ class OpenFileDialog: NSObject, UIDocumentPickerDelegate, UIImagePickerControlle
         }
     }
 
-    class func isPickDirectorySupported(result: @escaping FlutterResult) {
-        if #available(iOS 13, *) {
-            result(true)
-            return
-        }
-
-        result(false)
-    }
-
     func pickDirectory(result: @escaping FlutterResult) {
         flutterResult = result
         isPickDirectory = true
-
-        guard #available(iOS 13, *) else {
-            result(FlutterError(code: "minimum_target",
-                                message: "pickDirectory() available only on iOS 13 and above",
-                                details: nil))
-            return
-        }
 
         guard let viewController = UIApplication.shared.keyWindow?.rootViewController else {
             result(FlutterError(code: "fatal",

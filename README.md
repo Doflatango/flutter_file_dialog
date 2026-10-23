@@ -51,11 +51,6 @@ print(filePath);
 ### Pick a directory and save a file to the picked directory
 
 ```dart
-if (!await FlutterFileDialog.isPickDirectorySupported()) {
-  print("Picking directory not supported");
-  return;
-}
-
 final pickedDirectory = await FlutterFileDialog.pickDirectory();
 
 if (pickedDirectory != null) {

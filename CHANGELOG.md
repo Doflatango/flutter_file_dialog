@@ -2,6 +2,7 @@
 
 - `saveFileToDirectory`: `fileName` may now contain subdirectories(for example `reports/2026/report.pdf`); missing directories are created automatically below the picked directory on Android and iOS. Absolute paths and `.`/`..` segments are rejected.
 - [iOS] If the `fileName` path is an existing directory, `saveFileToDirectory` now fails instead of reporting `file_already_exists`.
+- Deprecated `FlutterFileDialog.isPickDirectorySupported`, this method will be removed in the future.
 
 ## 3.3.3
 

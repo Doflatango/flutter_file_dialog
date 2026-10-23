@@ -95,11 +95,6 @@ class FileDialog(
         Log.d(LOG_TAG, "pickDirectory - OUT")
     }
 
-    fun isPickDirectorySupported(result: MethodChannel.Result) {
-        // always supported: minSdk 24 is above the API 21 requirement
-        result.success(true)
-    }
-
     fun pickFile(result: MethodChannel.Result,
                  fileExtensionsFilter: Array<String>?,
                  mimeTypesFilter: Array<String>?,

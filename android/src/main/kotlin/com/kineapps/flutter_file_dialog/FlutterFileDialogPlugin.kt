@@ -149,7 +149,6 @@ class FlutterFileDialogPlugin : FlutterPlugin, ActivityAware, MethodCallHandler 
         }
         when (call.method) {
             "pickDirectory" -> fileDialog!!.pickDirectory(result)
-            "isPickDirectorySupported" -> fileDialog!!.isPickDirectorySupported(result)
             "saveFileToDirectory" -> saveFileToDirectory(
                     result,
                     mimeType = call.argument("mimeType") as String?,
